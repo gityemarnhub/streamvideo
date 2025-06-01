@@ -3,101 +3,395 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Stream</title>
+    <title>Video Player</title>
     <style>
-        body, html {
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
+        :root {
+            --primary: #4a90e2;
+            --primary-hover: #357abd;
+            --text: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.8);
+            --bg: #0f0f0f;
+            --controls-bg: rgba(15, 15, 15, 0.8);
+            --progress-bg: rgba(255, 255, 255, 0.2);
+            --progress-filled: #4a90e2;
+            --transition: all 0.2s ease;
+        }
+        
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body, html {
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #000;
+            background: var(--bg);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        video {
-            position: fixed;
-            top: 0;
-            left: 0;
+        
+        #videoContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+        }
+        
+        #videoPlayer {
             width: 100%;
             height: 100%;
             object-fit: contain;
+            outline: none;
+        }
+        
+        #controlsContainer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 16px;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+        
+        #progressContainer {
+            flex: 1;
+            height: 4px;
+            background: var(--progress-bg);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            margin: 0 10px;
+        }
+        
+        #progressBar {
+            height: 100%;
+            width: 0%;
+            background: var(--progress-filled);
+            border-radius: 2px;
+            transition: width 0.1s linear;
+            position: relative;
+        }
+        
+        #progressBar::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: var(--progress-filled);
+            border-radius: 50%;
+            opacity: 0;
+            transition: var(--transition);
+        }
+        
+        #progressContainer:hover #progressBar::after {
+            opacity: 1;
+        }
+        
+        #playPauseBtn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: var(--transition);
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        #playPauseBtn:hover {
+            background: var(--primary-hover);
+            transform: scale(1.05);
+        }
+        
+        #playPauseBtn:active {
+            transform: scale(0.95);
+        }
+        
+        #timeDisplay, #currentTime {
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 500;
+            background: var(--controls-bg);
+            padding: 4px 10px;
+            border-radius: 4px;
+            backdrop-filter: blur(10px);
+            font-feature-settings: 'tnum' 1;
+            white-space: nowrap;
+            flex-shrink: 0;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        #timeDisplay::before {
+            content: '/';
+            margin: 0 4px;
+            opacity: 0.6;
+        }
+        
+        /* Animate controls on hover */
+        #controlsContainer {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        #videoContainer:hover #controlsContainer {
+            opacity: 1;
+        }
+        
+        /* Loading animation */
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        
+        .loading {
+            animation: pulse 1.5s infinite;
         }
     </style>
 </head>
 <body>
-    <video id="videoPlayer" autoplay controls>
-        <source src="https://f93.megaup.net/2t3yc/(CM)_Luck_(2022)_720p.mp4?download_token=1e8a5eb2863540c833f7b829a3ba0a6153e0219994b2e06e2fa64bd6fd6c6281" type="video/mp4">
-        Your browser does not support the video tag.
-    </video>
+    <div id="videoContainer">
+        <video id="videoPlayer" autoplay>
+            <source src="https://f93.megaup.net/2t3yc/(CM)_Luck_(2022)_720p.mp4?download_token=1e8a5eb2863540c833f7b829a3ba0a6153e0219994b2e06e2fa64bd6fd6c6281" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        
+        <!-- Controls -->
+        <div id="controlsContainer">
+            <button id="playPauseBtn" title="Play/Pause (Space/Enter)">
+                <span id="playIcon">▶</span>
+                <span id="pauseIcon" style="display: none;">⏸</span>
+            </button>
+            <div id="currentTime">00:00</div>
+            <div id="progressContainer">
+                <div id="progressBar"></div>
+            </div>
+            <div id="timeDisplay">00:00</div>
+        </div>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Get DOM elements
             const video = document.getElementById('videoPlayer');
+            const videoContainer = document.getElementById('videoContainer');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressContainer = document.getElementById('progressContainer');
+            const timeDisplay = document.getElementById('timeDisplay');
             
-            // Set volume to max and try to play
-            video.volume = 1.0;
-            
-            // Try to enter fullscreen automatically
-            function enterFullscreen() {
-                if (video.requestFullscreen) {
-                    video.requestFullscreen().catch(err => {
-                        console.log('Fullscreen error:', err);
-                    });
+            // Format time in seconds to HH:MM:SS or MM:SS
+            function formatTime(seconds) {
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = Math.floor(seconds % 60);
+                
+                if (hours > 0) {
+                    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                } else {
+                    return `${minutes}:${secs.toString().padStart(2, '0')}`;
                 }
             }
-
-            // Try to play the video
-            const playPromise = video.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    // If autoplay is blocked, show play button
-                    console.log("Autoplay was prevented");
-                });
+            
+            // Update progress bar and time display
+            function updateProgress() {
+                const progress = (video.currentTime / video.duration) * 100;
+                progressBar.style.width = `${progress}%`;
+                document.getElementById('currentTime').textContent = formatTime(video.currentTime);
+                document.getElementById('timeDisplay').textContent = formatTime(video.duration);
             }
+            
+            // Set video progress when clicking on progress bar
+            function setProgress(e) {
+                const rect = progressContainer.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                video.currentTime = pos * video.duration;
+            }
+            
+            // Toggle play/pause
+            function togglePlay() {
+                if (video.paused) {
+                    video.play();
+                    document.getElementById('playIcon').style.display = 'none';
+                    document.getElementById('pauseIcon').style.display = 'inline';
+                } else {
+                    video.pause();
+                    document.getElementById('playIcon').style.display = 'inline';
+                    document.getElementById('pauseIcon').style.display = 'none';
+                }
+            }
+            
+            // Event listeners
+            playPauseBtn.addEventListener('click', togglePlay);
+            
+            // Progress bar
+            progressContainer.addEventListener('click', setProgress);
+            
+            // Video events
+            video.addEventListener('play', () => {
+                document.getElementById('playIcon').style.display = 'none';
+                document.getElementById('pauseIcon').style.display = 'inline';
+            });
+            
+            video.addEventListener('pause', () => {
+                document.getElementById('playIcon').style.display = 'inline';
+                document.getElementById('pauseIcon').style.display = 'none';
+            });
+            
+            video.addEventListener('timeupdate', updateProgress);
+            
+            video.addEventListener('ended', () => {
+                document.getElementById('playIcon').style.display = 'inline';
+                document.getElementById('pauseIcon').style.display = 'none';
+                document.getElementById('playIcon').textContent = '🔄';
+            });
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                switch(e.key) {
+                    case ' ':
+                    case 'Enter':
+                        e.preventDefault();
+                        togglePlay();
+                        break;
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        video.currentTime = Math.max(0, video.currentTime - 10);
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        video.currentTime = Math.min(video.duration, video.currentTime + 10);
+                        break;
+                }
+            });
+            
+            // Initial update of time display
+            video.addEventListener('loadedmetadata', () => {
+                document.getElementById('timeDisplay').textContent = formatTime(video.duration);
+            });
+            
+            // Try to play the video
+            video.play().catch(error => {
+                console.log('Autoplay was prevented');
+            });
 
             // Enter fullscreen when video starts playing
             video.addEventListener('playing', function() {
                 enterFullscreen();
+                showRemoteAction('Playing', 'Now playing');
+            });
+            
+            video.addEventListener('pause', function() {
+                showRemoteAction('Paused', 'Press Play to continue');
             });
 
             // Handle keyboard controls for remote
             document.addEventListener('keydown', function(e) {
+                // Prevent default for all keys to avoid page scrolling
+                e.preventDefault();
+                
+                // Show remote control effect
+                function showRemoteAction(key, action) {
+                    clearTimeout(hideRemoteTimeout);
+                    remoteMessage.innerHTML = `
+                        <span class="key">${key}</span>
+                        <span class="action">${action}</span>
+                    `;
+                    remoteEffect.classList.remove('show');
+                    // Force reflow
+                    void remoteEffect.offsetWidth;
+                    remoteEffect.classList.add('show');
+                    
+                    hideRemoteTimeout = setTimeout(() => {
+                        remoteEffect.classList.remove('show');
+                    }, 2000);
+                }
+
                 switch(e.key) {
                     case ' ':
                     case 'k':
                     case 'K':
                     case 'MediaPlayPause':
-                        if (video.paused) video.play();
-                        else video.pause();
-                        e.preventDefault();
+                        if (video.paused) {
+                            video.play();
+                            showRemoteAction('▶', 'Play');
+                        } else {
+                            video.pause();
+                            showRemoteAction('⏸', 'Pause');
+                        }
                         break;
                     case 'ArrowRight':
                         video.currentTime += 10; // Forward 10 seconds
-                        e.preventDefault();
+                        showRemoteAction('→', 'Forward 10s');
                         break;
                     case 'ArrowLeft':
                         video.currentTime -= 10; // Rewind 10 seconds
-                        e.preventDefault();
+                        showRemoteAction('←', 'Rewind 10s');
                         break;
                     case 'ArrowUp':
                         video.volume = Math.min(video.volume + 0.1, 1);
-                        e.preventDefault();
+                        showRemoteAction('🔊', `Volume: ${Math.round(video.volume * 100)}%`);
                         break;
                     case 'ArrowDown':
                         video.volume = Math.max(video.volume - 0.1, 0);
-                        e.preventDefault();
+                        showRemoteAction('🔉', `Volume: ${Math.round(video.volume * 100)}%`);
+                        break;
+                    case 'm':
+                    case 'M':
+                        video.muted = !video.muted;
+                        showRemoteAction(video.muted ? '🔇' : '🔊', video.muted ? 'Muted' : 'Unmuted');
                         break;
                     case 'f':
                     case 'F':
                     case 'Enter':
                         if (!document.fullscreenElement) {
                             enterFullscreen();
+                            showRemoteAction('⛶', 'Fullscreen');
                         } else {
                             document.exitFullscreen();
+                            showRemoteAction('⛶', 'Exit Fullscreen');
                         }
-                        e.preventDefault();
                         break;
+                    case 'Escape':
+                        if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                            showRemoteAction('⛶', 'Exit Fullscreen');
+                        }
+                        break;
+                    default:
+                        // Show a generic message for other keys
+                        showRemoteAction(e.key, 'Pressed');
                 }
             });
+            
+            // Show initial message
+            setTimeout(() => {
+                showRemoteAction('Remote', 'Controls Active');
+            }, 1000);
 
             // Try to enter fullscreen on page load
             enterFullscreen();
