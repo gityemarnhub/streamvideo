@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Stream</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+        video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+    <video id="videoPlayer" autoplay controls>
+        <source src="https://f93.megaup.net/2t3yc/(CM)_Luck_(2022)_720p.mp4?download_token=1e8a5eb2863540c833f7b829a3ba0a6153e0219994b2e06e2fa64bd6fd6c6281" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('videoPlayer');
+            
+            // Set volume to max and try to play
+            video.volume = 1.0;
+            
+            // Try to enter fullscreen automatically
+            function enterFullscreen() {
+                if (video.requestFullscreen) {
+                    video.requestFullscreen().catch(err => {
+                        console.log('Fullscreen error:', err);
+                    });
+                }
+            }
+
+            // Try to play the video
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    // If autoplay is blocked, show play button
+                    console.log("Autoplay was prevented");
+                });
+            }
+
+            // Enter fullscreen when video starts playing
+            video.addEventListener('playing', function() {
+                enterFullscreen();
+            });
+
+            // Handle keyboard controls for remote
+            document.addEventListener('keydown', function(e) {
+                switch(e.key) {
+                    case ' ':
+                    case 'k':
+                    case 'K':
+                    case 'MediaPlayPause':
+                        if (video.paused) video.play();
+                        else video.pause();
+                        e.preventDefault();
+                        break;
+                    case 'ArrowRight':
+                        video.currentTime += 10; // Forward 10 seconds
+                        e.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                        video.currentTime -= 10; // Rewind 10 seconds
+                        e.preventDefault();
+                        break;
+                    case 'ArrowUp':
+                        video.volume = Math.min(video.volume + 0.1, 1);
+                        e.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                        video.volume = Math.max(video.volume - 0.1, 0);
+                        e.preventDefault();
+                        break;
+                    case 'f':
+                    case 'F':
+                    case 'Enter':
+                        if (!document.fullscreenElement) {
+                            enterFullscreen();
+                        } else {
+                            document.exitFullscreen();
+                        }
+                        e.preventDefault();
+                        break;
+                }
+            });
+
+            // Try to enter fullscreen on page load
+            enterFullscreen();
+        });
+    </script>
+</body>
+</html>
