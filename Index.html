@@ -58,7 +58,7 @@
             left: 0;
             right: 0;
             padding: 20px;
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
             display: flex;
             flex-direction: row;
             align-items: center;
@@ -106,20 +106,23 @@
         }
         
         #playPauseBtn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--primary);
+            background: none;
             border: none;
-            color: white;
+            cursor: pointer;
+            padding: 0 15px;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            transition: var(--transition);
-            font-size: 18px;
-            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            transition: background-color 0.2s;
+        }
+        
+        #playPauseBtn img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
         }
         
         #playPauseBtn:hover {
@@ -135,29 +138,61 @@
             color: var(--text);
             font-size: 13px;
             font-weight: 500;
-            background: var(--controls-bg);
-            padding: 4px 10px;
-            border-radius: 4px;
-            backdrop-filter: blur(10px);
+            padding: 4px 0;
             font-feature-settings: 'tnum' 1;
             white-space: nowrap;
             flex-shrink: 0;
             font-variant-numeric: tabular-nums;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
         }
         
         #timeDisplay::before {
-            content: '/';
+            content: '';
             margin: 0 4px;
-            opacity: 0.6;
         }
         
-        /* Animate controls on hover */
+        /* Animate controls */
         #controlsContainer {
             opacity: 0;
             transition: opacity 0.3s ease;
+            pointer-events: none;
         }
         
-        #videoContainer:hover #controlsContainer {
+        #videoContainer:hover #controlsContainer,
+        #controlsContainer.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        /* Title Container */
+        #titleContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: linear-gradient(rgba(0, 0, 0, 0.85), transparent);
+            z-index: 10;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        #videoTitle {
+            color: var(--text);
+            font-size: 18px;
+            font-weight: 500;
+            padding: 8px 16px;
+            display: inline-block;
+            max-width: 80%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+        }
+        
+        /* Show title when controls are visible */
+        #videoContainer:hover #titleContainer,
+        #titleContainer.visible {
             opacity: 1;
         }
         
@@ -175,6 +210,9 @@
 </head>
 <body>
     <div id="videoContainer">
+        <div id="titleContainer">
+            <div id="videoTitle">Luck (2022)</div>
+        </div>
         <video id="videoPlayer" autoplay>
             <source src="https://f93.megaup.net/2t3yc/(CM)_Luck_(2022)_720p.mp4?download_token=1e8a5eb2863540c833f7b829a3ba0a6153e0219994b2e06e2fa64bd6fd6c6281" type="video/mp4">
             Your browser does not support the video tag.
@@ -183,8 +221,8 @@
         <!-- Controls -->
         <div id="controlsContainer">
             <button id="playPauseBtn" title="Play/Pause (Space/Enter)">
-                <span id="playIcon">▶</span>
-                <span id="pauseIcon" style="display: none;">⏸</span>
+                <img id="playIcon" src="play.png" alt="Play">
+                <img id="pauseIcon" src="pause.png" alt="Pause" style="display: none;">
             </button>
             <div id="currentTime">00:00</div>
             <div id="progressContainer">
@@ -204,25 +242,38 @@
             const progressContainer = document.getElementById('progressContainer');
             const timeDisplay = document.getElementById('timeDisplay');
             
-            // Format time in seconds to HH:MM:SS or MM:SS
+            // Format time in seconds to HH:MM:SS or MM:SS (compatible with older browsers)
             function formatTime(seconds) {
-                const hours = Math.floor(seconds / 3600);
-                const minutes = Math.floor((seconds % 3600) / 60);
-                const secs = Math.floor(seconds % 60);
+                if (isNaN(seconds)) return '00:00';
+                
+                seconds = Math.floor(seconds);
+                var hours = Math.floor(seconds / 3600);
+                var minutes = Math.floor((seconds % 3600) / 60);
+                var secs = seconds % 60;
+                
+                // Add leading zeros
+                minutes = (minutes < 10 ? '0' : '') + minutes;
+                secs = (secs < 10 ? '0' : '') + secs;
                 
                 if (hours > 0) {
-                    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    hours = (hours < 10 ? '0' : '') + hours;
+                    return hours + ':' + minutes + ':' + secs;
                 } else {
-                    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+                    return minutes + ':' + secs;
                 }
             }
             
             // Update progress bar and time display
             function updateProgress() {
-                const progress = (video.currentTime / video.duration) * 100;
-                progressBar.style.width = `${progress}%`;
+                // Always update progress bar even if duration isn't fully loaded yet
+                const duration = video.duration || 1; // Fallback to 1 to avoid division by zero
+                const progress = (video.currentTime / duration) * 100;
+                progressBar.style.width = progress + '%';
                 document.getElementById('currentTime').textContent = formatTime(video.currentTime);
-                document.getElementById('timeDisplay').textContent = formatTime(video.duration);
+                // Only update duration display if we have valid duration
+                if (video.readyState > 0 && video.duration) {
+                    document.getElementById('timeDisplay').textContent = formatTime(video.duration);
+                }
             }
             
             // Set video progress when clicking on progress bar
@@ -245,30 +296,72 @@
                 }
             }
             
+            // Control bar auto-hide functionality
+            let hideControlsTimeout;
+            const controls = document.getElementById('controlsContainer');
+            
+            function showControls() {
+                const titleContainer = document.getElementById('titleContainer');
+                controls.style.opacity = '1';
+                titleContainer.style.opacity = '1';
+                clearTimeout(hideControlsTimeout);
+                if (!video.paused) {
+                    hideControlsTimeout = setTimeout(() => {
+                        controls.style.opacity = '0';
+                        titleContainer.style.opacity = '0';
+                    }, 5000); // Hide after 5 seconds
+                }
+            }
+            
+            function hideControls() {
+                if (!video.paused) {
+                    const titleContainer = document.getElementById('titleContainer');
+                    controls.style.opacity = '0';
+                    titleContainer.style.opacity = '0';
+                }
+            }
+            
             // Event listeners
             playPauseBtn.addEventListener('click', togglePlay);
             
             // Progress bar
-            progressContainer.addEventListener('click', setProgress);
+            progressContainer.addEventListener('click', (e) => {
+                setProgress(e);
+                showControls();
+            });
             
             // Video events
             video.addEventListener('play', () => {
                 document.getElementById('playIcon').style.display = 'none';
                 document.getElementById('pauseIcon').style.display = 'inline';
+                showControls();
             });
             
             video.addEventListener('pause', () => {
                 document.getElementById('playIcon').style.display = 'inline';
                 document.getElementById('pauseIcon').style.display = 'none';
+                showControls();
+                videoContainer.addEventListener('mousemove', showControls);
+                videoContainer.addEventListener('mouseleave', hideControls);
             });
+            
+            video.addEventListener('seeking', showControls);
+            video.addEventListener('seeked', showControls);
             
             video.addEventListener('timeupdate', updateProgress);
             
             video.addEventListener('ended', () => {
                 document.getElementById('playIcon').style.display = 'inline';
                 document.getElementById('pauseIcon').style.display = 'none';
-                document.getElementById('playIcon').textContent = '🔄';
+                // No text content for replay state
+                showControls();
             });
+            
+            // Hide controls when mouse leaves video container
+            videoContainer.addEventListener('mouseleave', hideControls);
+            
+            // Initial hide
+            hideControls();
             
             // Keyboard controls
             document.addEventListener('keydown', (e) => {
@@ -290,13 +383,28 @@
             });
             
             // Initial update of time display
-            video.addEventListener('loadedmetadata', () => {
-                document.getElementById('timeDisplay').textContent = formatTime(video.duration);
-            });
+            function updateDurationDisplay() {
+                if (video.duration && isFinite(video.duration)) {
+                    document.getElementById('timeDisplay').textContent = formatTime(video.duration);
+                }
+            }
+            
+            // Update duration when metadata is loaded
+            video.addEventListener('loadedmetadata', updateDurationDisplay);
+            
+            // Also try to update duration when the video can play
+            video.addEventListener('canplay', updateDurationDisplay);
+            
+            // Initial check in case the video is already loaded
+            if (video.readyState > 0) {
+                updateDurationDisplay();
+            }
             
             // Try to play the video
             video.play().catch(error => {
                 console.log('Autoplay was prevented');
+                // Show controls if autoplay is prevented
+                showControls();
             });
 
             // Enter fullscreen when video starts playing
@@ -332,6 +440,10 @@
                 }
 
                 switch(e.key) {
+                    case 'ArrowDown':
+                        showControls();
+                        showRemoteAction('↓', 'Show Controls');
+                        break;
                     case ' ':
                     case 'k':
                     case 'K':
@@ -345,11 +457,13 @@
                         }
                         break;
                     case 'ArrowRight':
-                        video.currentTime += 10; // Forward 10 seconds
+                        video.currentTime = Math.min(video.currentTime + 10, video.duration || 0);
+                        updateProgress(); // Update progress bar immediately
                         showRemoteAction('→', 'Forward 10s');
                         break;
                     case 'ArrowLeft':
-                        video.currentTime -= 10; // Rewind 10 seconds
+                        video.currentTime = Math.max(video.currentTime - 10, 0);
+                        updateProgress(); // Update progress bar immediately
                         showRemoteAction('←', 'Rewind 10s');
                         break;
                     case 'ArrowUp':
