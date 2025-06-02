@@ -183,10 +183,9 @@
             font-weight: 500;
             padding: 8px 16px;
             display: inline-block;
-            max-width: 80%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            max-width: 100%;
+            white-space: normal;
+            word-wrap: break-word;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
         }
         
@@ -211,10 +210,10 @@
 <body>
     <div id="videoContainer">
         <div id="titleContainer">
-            <div id="videoTitle">Luck (2022)</div>
+            <div id="videoTitle">Loading video...</div>
         </div>
         <video id="videoPlayer" autoplay>
-            <source src="https://f67.megaup.net/1836af6bc0aab934649f82a0b9f311c6/Red.One.2024.720p.AMZN.WEB-DL_(CM).mp4?download_token=eb06ba1f32dac73cf728f23325eebfc9f6243aeb2baedd258820fc4d7340ff7a" type="video/mp4">
+            <source src="https://f94.megaup.net/2t3G5/(CM)_Luck_(2022)_1080p.mp4?download_token=0bb483870370d50992594ca2de0501ad4ab8e6a3af0263a54e31433df00cc6d2" type="video/mp4">
             Your browser does not support the video tag.
         </video>
         
@@ -399,6 +398,46 @@
             if (video.readyState > 0) {
                 updateDurationDisplay();
             }
+
+            // Function to update video title from URL
+            function updateVideoTitle() {
+                const videoSource = video.querySelector('source');
+                if (videoSource) {
+                    const url = videoSource.src;
+                    // Try to extract a meaningful title from the URL
+                    let title = 'Video Player';
+                    const urlObj = new URL(url);
+                    const pathname = urlObj.pathname;
+                    
+                    // Extract filename from path
+                    const filename = pathname.split('/').pop() || '';
+                    
+                    // Clean up the filename to make it more readable
+                    if (filename) {
+                        // Remove common prefixes/suffixes and file extensions
+                        title = filename
+                            .replace(/\([^)]*\)/g, '')  // Remove anything in parentheses
+                            .replace(/[_-]/g, ' ')         // Replace underscores and dashes with spaces
+                            .replace(/\.[^/.]+$/, '')      // Remove file extension
+                            .replace(/\b(720p|1080p|HD|FHD|UHD|4K|8K|WEB|DL|BluRay|x264|x265|AAC5 1|RARBG|YTS|YIFY|BrRip|WEBRip|HDRip|WEB-DL|BluRay|HEVC|10bit|AC3|DTS|AAC|5 1|2 0|AMZN|NF|ATVP|DSNP|HMAX|HULU|ATVP|ATVP|ATVP)\b/gi, '') // Remove common video quality indicators
+                            .replace(/\s+/g, ' ')          // Replace multiple spaces with a single space
+                            .trim();
+                        
+                        // If we ended up with an empty string, use the original filename
+                        if (!title) {
+                            title = filename.replace(/\.[^/.]+$/, ''); // Just remove the extension
+                        }
+                    }
+                    
+                    document.getElementById('videoTitle').textContent = title || 'Video Player';
+                }
+            }
+            
+            // Update title when video source changes
+            video.addEventListener('loadedmetadata', updateVideoTitle);
+            
+            // Initial title update
+            updateVideoTitle();
             
             // Try to play the video
             video.play().catch(error => {
