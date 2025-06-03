@@ -194,6 +194,95 @@
         #titleContainer.visible {
             opacity: 1;
         }
+
+        /* Video Library Styles */
+        #videoLibrary {
+            position: absolute;
+            bottom: 70px;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 10;
+            max-height: 40vh;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #videoLibrary.visible {
+            transform: translateY(0);
+            display: flex;
+        }
+
+        .library-header {
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding: 0 10px;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+            width: 100%;
+        }
+
+        .video-thumbnail {
+            background: #222;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            aspect-ratio: 16/9;
+            position: relative;
+        }
+
+        .video-thumbnail:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .thumbnail-container {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #000;
+        }
+        
+        .video-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .video-thumbnail .title {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            color: white;
+            padding: 10px;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .video-thumbnail.active {
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.5);
+        }
         
         /* Loading animation */
         @keyframes pulse {
@@ -228,6 +317,14 @@
                 <div id="progressBar"></div>
             </div>
             <div id="timeDisplay">00:00</div>
+        </div>
+        
+        <!-- Video Library -->
+        <div id="videoLibrary">
+            <div class="library-header">Your Library</div>
+            <div class="video-grid" id="videoGrid">
+                <!-- Video thumbnails will be added here dynamically -->
+            </div>
         </div>
     </div>
 
@@ -363,9 +460,198 @@
             hideControls();
             
             // Keyboard controls
-            document.addEventListener('keydown', (e) => {
+            document.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowDown' && downKeyTimer) {
+                    clearTimeout(downKeyTimer);
+                    downKeyTimer = null;
+                }
+            });
+            
+            // Close library when clicking outside
+            document.addEventListener('click', (e) => {
+                if (isLibraryOpen && !videoLibrary.contains(e.target) && e.target !== videoLibrary) {
+                    toggleLibrary(false);
+                }
+            });
+            
+            // Video Library Functionality
+            const videoLibrary = document.getElementById('videoLibrary');
+            const videoGrid = document.getElementById('videoGrid');
+            let isLibraryOpen = false;
+            let downKeyTimer;
+            const DOWN_KEY_DURATION = 500; // ms to hold down key to show library
+            
+            // Sample video library data
+            const videoLibraryData = [
+                {
+                    title: 'Red One (2024)',
+                    thumbnail: 'https://imageio.forbes.com/specials-images/imageserve/672c2af2bda2257051870763/-Red-One--partial-poster-/0x0.jpg?format=jpg&crop=700,393,x28,y1,safe&width=960',
+                    url: 'https://f67.megaup.net/1836af6bc0aab934649f82a0b9f311c6/Red.One.2024.720p.AMZN.WEB-DL_(CM).mp4?download_token=6a7f5980156f914ce80e242e0366911b9801b08312235d0802c8aaabc3b83ce9'
+                },
+                {
+                    title: 'Luck (2022)',
+                    thumbnail: 'https://via.placeholder.com/300x169?text=Sample+1',
+                    url: 'https://drive.usercontent.google.com/download?id=1yy1SP4krbpSMCIssxqwjaEOAcmcgmLOD&export=download&authuser=0&confirm=t&uuid=94f8c4a2-1c42-4465-9a31-3abbe461ff9a&at=ALoNOglpMepVI5Vz3EP8HmsqHkpK:1748778678827'
+                },
+                {
+                    title: 'Legends (2015)',
+                    thumbnail: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTd1aeILE0-02856tZ_U5sdkQsgd1Da__5qGQ&s',
+                    url: 'https://f46.megaup.net/331d9630466384d54410747ba354bd08/(CM)_Legend.2015.1080p.BluRay.REMUX.HEVC-Naung.mkv?download_token=d6d6bb7184c1060d4d3e18510ba103c7ec0413e7f32510386bf9d361de6b6c8f'
+                },
+                {
+                    title: 'Sample Video 3',
+                    thumbnail: 'https://via.placeholder.com/300x169?text=Sample+3',
+                    url: 'sample3.mp4'
+                }
+            ];
+            
+            // Initialize video library
+            function initVideoLibrary() {
+                videoGrid.innerHTML = '';
+                videoLibraryData.forEach((video, index) => {
+                    const videoElement = document.createElement('div');
+                    videoElement.className = 'video-thumbnail';
+                    const thumbnailUrl = video.thumbnail || ''; // Use empty string if no thumbnail
+                    videoElement.innerHTML = `
+                        <div class="thumbnail-container" style="background-color: ${thumbnailUrl ? 'transparent' : '#000'}">
+                            ${thumbnailUrl ? `<img src="${thumbnailUrl}" alt="${video.title}" onerror="this.style.display='none'; this.parentNode.style.backgroundColor='#000';">` : ''}
+                        </div>
+                        <div class="title">${video.title}</div>
+                    `;
+                    videoElement.addEventListener('click', () => loadVideo(video.url, video.title, index));
+                    videoGrid.appendChild(videoElement);
+                });
+            }
+            
+            let currentVideoIndex = 0; // Track the current video index
+            
+            // Load a video from the library
+            function loadVideo(url, title, index) {
+                // Update current index
+                currentVideoIndex = index;
+                
+                video.src = url;
+                video.load();
+                video.play();
+                document.getElementById('videoTitle').textContent = title;
+                
+                // Update active state
+                updateActiveThumbnail(index);
+                
+                // Show loading state
+                videoContainer.classList.add('loading');
+                video.oncanplay = function() {
+                    videoContainer.classList.remove('loading');
+                    video.oncanplay = null; // Remove the handler after first execution
+                };
+            }
+            
+            // Update the active thumbnail and scroll it into view
+            function updateActiveThumbnail(index) {
+                const thumbnails = document.querySelectorAll('.video-thumbnail');
+                thumbnails.forEach((el, i) => {
+                    if (i === index) {
+                        el.classList.add('active');
+                        // Scroll the active thumbnail into view if needed
+                        el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    } else {
+                        el.classList.remove('active');
+                    }
+                });
+            }
+            
+            let libraryHideTimer;
+            const LIBRARY_HIDE_DELAY = 3000; // 3 seconds
+            
+            // Reset hide timer on any interaction
+            function resetLibraryHideTimer() {
+                if (libraryHideTimer) clearTimeout(libraryHideTimer);
+                if (isLibraryOpen) {
+                    libraryHideTimer = setTimeout(() => {
+                        toggleLibrary(false);
+                    }, LIBRARY_HIDE_DELAY);
+                }
+            }
+            
+            // Toggle video library
+            function toggleLibrary(show) {
+                if (isLibraryOpen === show) return; // No change needed
+                
+                isLibraryOpen = show;
+                if (show) {
+                    videoLibrary.classList.add('visible');
+                    showControls();
+                    resetLibraryHideTimer();
+                } else {
+                    videoLibrary.classList.remove('visible');
+                    if (libraryHideTimer) {
+                        clearTimeout(libraryHideTimer);
+                        libraryHideTimer = null;
+                    }
+                }
+            }
+            
+            // Initialize the library
+            initVideoLibrary();
+            
+            // Add event listeners for library interactions
+            videoLibrary.addEventListener('mousemove', resetLibraryHideTimer);
+            videoLibrary.addEventListener('click', resetLibraryHideTimer);
+            
+            // Handle keyboard controls
+            function handleKeyDown(e) {
+                // Check if library is open first
+                if (isLibraryOpen) {
+                    // Only handle these keys when library is open
+                    switch(e.key) {
+                        case 'Enter':
+                            e.preventDefault();
+                            const activeVideo = videoLibraryData[currentVideoIndex];
+                            loadVideo(activeVideo.url, activeVideo.title, currentVideoIndex);
+                            toggleLibrary(false);
+                            return false;
+                            
+                        case 'ArrowLeft':
+                            e.preventDefault();
+                            const prevIndex = (currentVideoIndex - 1 + videoLibraryData.length) % videoLibraryData.length;
+                            currentVideoIndex = prevIndex;
+                            updateActiveThumbnail(prevIndex);
+                            resetLibraryHideTimer();
+                            return false;
+                            
+                        case 'ArrowRight':
+                            e.preventDefault();
+                            const nextIndex = (currentVideoIndex + 1) % videoLibraryData.length;
+                            currentVideoIndex = nextIndex;
+                            updateActiveThumbnail(nextIndex);
+                            resetLibraryHideTimer();
+                            return false;
+                            
+                        case 'Escape':
+                            e.preventDefault();
+                            toggleLibrary(false);
+                            return false;
+                            
+                        default:
+                            // Block all other keys when library is open
+                            if (['ArrowUp', 'ArrowDown', ' ', 'k', 'K', 'm', 'M', 'f', 'F', 'MediaPlayPause'].includes(e.key)) {
+                                e.preventDefault();
+                                return false;
+                            }
+                    }
+                    
+                    return false; // Block all other keys when library is open
+                }
+                
+                // Handle keys when library is closed
                 switch(e.key) {
                     case ' ':
+                    case 'k':
+                    case 'K':
+                    case 'MediaPlayPause':
+                        e.preventDefault();
+                        togglePlay();
+                        break;
                     case 'Enter':
                         e.preventDefault();
                         togglePlay();
@@ -378,28 +664,95 @@
                         e.preventDefault();
                         video.currentTime = Math.min(video.duration, video.currentTime + 10);
                         break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        video.volume = Math.min(video.volume + 0.1, 1);
+                        break;
+                    case 'ArrowDown':
+                        // Start timer on key down for showing library
+                        if (!downKeyTimer) {
+                            downKeyTimer = setTimeout(() => {
+                                toggleLibrary(true);
+                                downKeyTimer = null;
+                            }, DOWN_KEY_DURATION);
+                        }
+                        e.preventDefault();
+                        video.volume = Math.max(video.volume - 0.1, 0);
+                        break;
+                }
+            }
+            
+            // Capture phase listener to handle library navigation
+            document.addEventListener('keydown', function(e) {
+                if (!isLibraryOpen) return;
+                
+                switch(e.key) {
+                    case 'ArrowLeft':
+                    case 'ArrowRight':
+                        // Allow these for library navigation
+                        return;
+                    case 'Enter':
+                    case 'Escape':
+                        // Handle these in the main handler
+                        return;
+                    default:
+                        // Block all other keys when library is open
+                        if (['ArrowUp', 'ArrowDown', ' ', 'k', 'K', 'm', 'M', 'f', 'F', 'MediaPlayPause'].includes(e.key)) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            return false;
+                        }
+                }
+            }, true); // Use capture phase to catch events early
+            
+            // Add keyboard event listener
+            document.addEventListener('keydown', handleKeyDown);
+            
+            // Handle key up for down arrow to show library
+            document.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowDown' && downKeyTimer) {
+                    clearTimeout(downKeyTimer);
+                    downKeyTimer = null;
                 }
             });
             
-            // Initial update of time display
-            function updateDurationDisplay() {
-                if (video.duration && isFinite(video.duration)) {
-                    document.getElementById('timeDisplay').textContent = formatTime(video.duration);
+            // Handle mute toggle
+            function toggleMute() {
+                video.muted = !video.muted;
+                const muteIcon = document.getElementById('muteIcon');
+                const volumeIcon = document.getElementById('volumeIcon');
+                if (video.muted) {
+                    muteIcon.style.display = 'inline';
+                    volumeIcon.style.display = 'none';
+                } else {
+                    muteIcon.style.display = 'none';
+                    volumeIcon.style.display = 'inline';
                 }
             }
             
-            // Update duration when metadata is loaded
-            video.addEventListener('loadedmetadata', updateDurationDisplay);
-            
-            // Also try to update duration when the video can play
-            video.addEventListener('canplay', updateDurationDisplay);
-            
-            // Initial check in case the video is already loaded
-            if (video.readyState > 0) {
-                updateDurationDisplay();
+            // Handle fullscreen toggle
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    if (videoContainer.requestFullscreen) {
+                        videoContainer.requestFullscreen();
+                    } else if (videoContainer.webkitRequestFullscreen) { /* Safari */
+                        videoContainer.webkitRequestFullscreen();
+                    } else if (videoContainer.msRequestFullscreen) { /* IE11 */
+                        videoContainer.msRequestFullscreen();
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) { /* Safari */
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) { /* IE11 */
+                        document.msExitFullscreen();
+                    }
+                }
             }
-
-            // Function to update video title from URL
+            
+            // Initial title update
             function updateVideoTitle() {
                 const videoSource = video.querySelector('source');
                 if (videoSource) {
@@ -480,6 +833,14 @@
 
                 switch(e.key) {
                     case 'ArrowDown':
+                        // Start timer on key down
+                        if (!downKeyTimer) {
+                            downKeyTimer = setTimeout(() => {
+                                toggleLibrary(!isLibraryOpen);
+                                showRemoteAction('📚', isLibraryOpen ? 'Hide Library' : 'Show Library');
+                                downKeyTimer = null;
+                            }, DOWN_KEY_DURATION);
+                        }
                         showControls();
                         showRemoteAction('↓', 'Show Controls');
                         break;
