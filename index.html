@@ -201,16 +201,24 @@
             bottom: 70px;
             left: 0;
             right: 0;
-            background: rgba(0, 0, 0, 0.9);
-            padding: 15px;
+            background: linear-gradient(
+                to top,
+                rgba(0, 0, 0, 0.95) 0%,
+                rgba(0, 0, 0, 0.85) 30%,
+                rgba(0, 0, 0, 0.7) 100%
+            );
+            padding: 20px 15px 30px;
             transform: translateY(100%);
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, opacity 0.3s ease;
             z-index: 10;
-            max-height: 40vh;
+            max-height: 50vh;
             overflow-y: auto;
             display: none;
             flex-direction: column;
-            gap: 10px;
+            gap: 15px;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         #videoLibrary.visible {
@@ -228,22 +236,38 @@
 
         .video-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
             width: 100%;
-            padding: 5px;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        
+        @media (max-width: 768px) {
+            .video-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .video-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+            }
         }
 
         .video-thumbnail {
             background: #222;
-            border-radius: 6px;
+            border-radius: 8px;
             overflow: hidden;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
             aspect-ratio: 16/9;
             position: relative;
-            max-width: 200px;
-            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         .video-thumbnail:hover {
@@ -253,19 +277,28 @@
 
         .thumbnail-container {
             width: 100%;
-            height: 100%;
+            flex: 1;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
             background-color: #000;
+            position: relative;
+            min-height: 0; /* Allows the container to shrink below content size */
         }
         
         .video-thumbnail img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: cover; /* Changed from contain to cover to fill the container */
             display: block;
+            transition: transform 0.3s ease;
+            max-width: 100%; /* Ensure image doesn't exceed container width */
+            max-height: 100%; /* Ensure image doesn't exceed container height */
+        }
+        
+        .video-thumbnail:hover img {
+            transform: scale(1.05);
         }
 
         .video-thumbnail .title {
@@ -305,7 +338,7 @@
             <div id="videoTitle">Loading video...</div>
         </div>
         <video id="videoPlayer" autoplay>
-            <source src="https://f98.megaup.net/39xYQ/(CM)_Johnny.English.2003.iNTERNAL.1080p.BluRay.HEVC.AAC.5.1-Nyein.mkv?download_token=a51369661a1848e44dc384bddc695ab537c41243badfa39f03be256217d397b1" type="video/mp4">
+            <!-- Source will be set by JavaScript from videoLibraryData -->
             Your browser does not support the video tag.
         </video>
         
@@ -492,9 +525,9 @@
                     url: 'https://f67.megaup.net/1836af6bc0aab934649f82a0b9f311c6/Red.One.2024.720p.AMZN.WEB-DL_(CM).mp4?download_token=6a7f5980156f914ce80e242e0366911b9801b08312235d0802c8aaabc3b83ce9'
                 },
                 {
-                    title: 'Luck (2022)',
+                    title: 'Johny English (2003)',
                     thumbnail: 'https://via.placeholder.com/300x169?text=Sample+1',
-                    url: 'https://drive.usercontent.google.com/download?id=1yy1SP4krbpSMCIssxqwjaEOAcmcgmLOD&export=download&authuser=0&confirm=t&uuid=94f8c4a2-1c42-4465-9a31-3abbe461ff9a&at=ALoNOglpMepVI5Vz3EP8HmsqHkpK:1748778678827'
+                    url: 'https://f98.megaup.net/39xYQ/(CM)_Johnny.English.2003.iNTERNAL.1080p.BluRay.HEVC.AAC.5.1-Nyein.mkv?download_token=a51369661a1848e44dc384bddc695ab537c41243badfa39f03be256217d397b1'
                 },
                 {
                     title: 'Legends (2015)',
@@ -514,10 +547,10 @@
                 videoLibraryData.forEach((video, index) => {
                     const videoElement = document.createElement('div');
                     videoElement.className = 'video-thumbnail';
-                    const thumbnailUrl = video.thumbnail || ''; // Use empty string if no thumbnail
+                    const thumbnailUrl = video.thumbnail || 'video.jpg'; // Use video.jpg as default if no thumbnail
                     videoElement.innerHTML = `
-                        <div class="thumbnail-container" style="background-color: ${thumbnailUrl ? 'transparent' : '#000'}">
-                            ${thumbnailUrl ? `<img src="${thumbnailUrl}" alt="${video.title}" onerror="this.style.display='none'; this.parentNode.style.backgroundColor='#000';">` : ''}
+                        <div class="thumbnail-container" style="background-color: #000">
+                            <img src="${thumbnailUrl}" alt="${video.title}" onerror="this.src='video.jpg';">
                         </div>
                         <div class="title">${video.title}</div>
                     `;
@@ -596,6 +629,12 @@
             
             // Initialize the library
             initVideoLibrary();
+            
+            // Load the first video from the library
+            if (videoLibraryData.length > 0) {
+                const firstVideo = videoLibraryData[0];
+                loadVideo(firstVideo.url, firstVideo.title, 0);
+            }
             
             // Add event listeners for library interactions
             videoLibrary.addEventListener('mousemove', resetLibraryHideTimer);
